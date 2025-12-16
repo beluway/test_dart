@@ -1,4 +1,4 @@
-
+/* 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test_dart/blocs/bloc_rutinas.dart';
@@ -185,6 +185,7 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
     // ⚠️ Importante: Usaremos 'nombre' y no 'id' para la lógica del DAO.
     TextEditingController _nombreEjercicioController = TextEditingController();
     TextEditingController _repeticionesController = TextEditingController();
+    TextEditingController _descripcionController = TextEditingController();
     
     // Si estamos editando, pre-cargamos los valores
     if (ejercicioExistente != null) {
@@ -225,6 +226,15 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
                                 ),
                                 keyboardType: TextInputType.number,
                             ),
+                              // 2. Input de descripción
+                            TextFormField(
+                                controller: _descripcionController,
+                                decoration: const InputDecoration(
+                                    labelText: 'Descripción',
+                                    border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.text,
+                            ),
                         ],
                     ),
                 ),
@@ -237,6 +247,7 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
                         onPressed: () {
                             final String nombreEjercicio = _nombreEjercicioController.text.trim();
                             final int? repeticiones = int.tryParse(_repeticionesController.text);
+                            final String descripcion = _descripcionController.text.trim();
 
                             if (nombreEjercicio.isEmpty || repeticiones == null || repeticiones <= 0) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -250,7 +261,7 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
                             // Lógica para AÑADIR o EDITAR
                             if (ejercicioExistente == null) {
                                 // ➡️ AÑADIR: Ahora pasamos el NOMBRE y las repeticiones
-                                _anadirEjercicioPorNombre(nombreEjercicio, repeticiones);
+                                _anadirEjercicioPorNombre(nombreEjercicio, repeticiones, descripcion);
                             } else {
                                 // ➡️ EDITAR: Mantenemos la lógica de edición
                                 _editarEjercicioPorNombre(nombreEjercicio, repeticiones, ejercicioExistente);
@@ -264,7 +275,7 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
     );
 }
 
-void _anadirEjercicioPorNombre(String nombre, int repeticiones) {
+void _anadirEjercicioPorNombre(String nombre, int repeticiones, String descripcion) {
     // 1. Feedback inicial (antes del BLoC)
     ScaffoldMessenger.of(context).showSnackBar(
  SnackBar(content: Text('Procesando: $nombre...')),
@@ -276,6 +287,7 @@ void _anadirEjercicioPorNombre(String nombre, int repeticiones) {
             fecha: _fechaActual, 
             nombreEjercicio: nombre, // Nuevo parámetro
             repeticiones: repeticiones,
+            descripcion: descripcion,
         )
     );
 }
@@ -399,6 +411,347 @@ return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
  ),
  ),
 
+      ],
+    );
+  }
+}
+ */
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:test_dart/blocs/bloc_rutinas.dart';
+import 'package:test_dart/blocs/estados_rutinas.dart';
+import 'package:test_dart/blocs/evento_rutinas.dart';
+import 'package:test_dart/widgets/calendar.dart';
+
+class GestionRutinaEjercicioTab extends StatefulWidget {
+  const GestionRutinaEjercicioTab({super.key});
+
+  @override
+  State<GestionRutinaEjercicioTab> createState() =>
+      _GestionRutinaEjercicioTabState();
+}
+
+class _GestionRutinaEjercicioTabState
+    extends State<GestionRutinaEjercicioTab> {
+  DateTime _fechaActual = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarRutina(_fechaActual);
+    });
+  }
+
+  // ===================== BLoC =====================
+
+  void _cargarRutina(DateTime fecha) {
+    context.read<BlocRutinas>().add(
+          CargarRutinaPorFecha(fecha: fecha),
+        );
+  }
+
+  void _actualizarFecha(DateTime nuevaFecha) {
+    setState(() => _fechaActual = nuevaFecha);
+    _cargarRutina(nuevaFecha);
+  }
+
+  void _anadirEjercicioPorNombre(String nombre, int repeticiones, String descripcion) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Procesando: $nombre...')),
+    );
+
+    context.read<BlocRutinas>().add(
+          AgregarEjercicioPorNombre(
+            fecha: _fechaActual,
+            nombreEjercicio: nombre,
+            repeticiones: repeticiones,
+          ),
+        );
+  }
+
+  void _confirmarEliminacion(
+      int idRutina, int idEjercicio, String nombreEjercicio) {
+    context.read<BlocRutinas>().add(
+          EliminarEjercicioDeRutina(
+            idRutina: idRutina,
+            idEjercicio: idEjercicio,
+            nombreEjercicio: nombreEjercicio,
+            fechaActual: _fechaActual,
+          ),
+        );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Eliminando: $nombreEjercicio...')),
+    );
+  }
+
+  // ===================== DIALOGO =====================
+
+  Future<void> _mostrarDialogoEjercicio(
+      Map<String, dynamic>? ejercicioExistente) async {
+    final nombreController = TextEditingController();
+    final repeticionesController = TextEditingController();
+    final descripcionController = TextEditingController();
+
+    final focusNombre = FocusNode();
+    final focusReps = FocusNode();
+    final focusDesc = FocusNode();
+
+    if (ejercicioExistente != null) {
+      nombreController.text =
+          (ejercicioExistente['nombre_ejercicio'] as String?) ?? '';
+      repeticionesController.text =
+          ((ejercicioExistente['repeticiones'] as int?) ?? 0).toString();
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            ejercicioExistente == null
+                ? 'Añadir ejercicio'
+                : 'Editar ejercicio',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // NOMBRE
+                TextFormField(
+                  controller: nombreController,
+                  focusNode: focusNombre,
+                  readOnly: ejercicioExistente != null,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(dialogContext)
+                        .requestFocus(focusReps);
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del ejercicio',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // REPETICIONES
+                TextFormField(
+                  controller: repeticionesController,
+                  focusNode: focusReps,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(dialogContext)
+                        .requestFocus(focusDesc);
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Repeticiones',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // DESCRIPCIÓN
+                TextFormField(
+                  controller: descripcionController,
+                  focusNode: focusDesc,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(dialogContext).unfocus();
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Descripción',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                FocusScope.of(dialogContext).unfocus();
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final nombre = nombreController.text.trim();
+                final reps =
+                    int.tryParse(repeticionesController.text);
+                final descripcion = descripcionController.text.trim();
+
+                if (nombre.isEmpty || reps == null || reps <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('Complete los campos correctamente'),
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+
+                if (ejercicioExistente == null) {
+                  _anadirEjercicioPorNombre(nombre, reps, descripcion);
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ===================== UI =====================
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SelectorFecha(onDateSelected: _actualizarFecha),
+        const Divider(),
+        Expanded(
+          child: BlocBuilder<BlocRutinas, EstadoRutinas>(
+            builder: (context, state) {
+              if (state is CargandoRutinas) {
+                return const Center(
+                    child: CircularProgressIndicator());
+              }
+
+              if (state is ErrorRutinas) {
+                return Center(
+                  child:
+                      Text(state.mensaje ?? 'Error cargando rutina'),
+                );
+              }
+
+              if (state is ExitoRutinas) {
+                final ejercicios = state.ejercicios;
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            _mostrarDialogoEjercicio(null),
+                        icon: const Icon(Icons.add),
+                        label: Text(
+                          ejercicios.isEmpty
+                              ? 'Crear rutina y añadir ejercicio'
+                              : 'Añadir ejercicio',
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ejercicios.isEmpty
+                          ? Center(
+                              child: Text(
+                                state.mensaje ??
+                                    'No hay ejercicios para este día',
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: ejercicios.length,
+                              itemBuilder: (_, index) {
+                                final e = ejercicios[index];
+
+                                final idRutina =
+                                    (e['id_rutina'] as int?) ?? 0;
+                                final idEjercicio =
+                                    (e['id_ejercicio'] as int?) ?? 0;
+                                final nombre =
+                                    (e['nombre_ejercicio']
+                                            as String?) ??
+                                        'Sin nombre';
+                                final reps =
+                                    (e['repeticiones'] as int?) ?? 0;
+                                final descrip = (e['descripcion_ejercicio'] as String?) ?? 'Descripción no provista.';
+
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 6),
+                                  child: Card(
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.fitness_center,
+                                            size: 32,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment
+                                                      .start,
+                                              children: [
+                                                Text(
+                                                  nombre,
+                                                  style:
+                                                      const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(
+                                                    height: 6),
+                                                Text(
+                                                    'Repeticiones: $reps'),
+                                                    const SizedBox(height: 6),
+                                                    Text('Descripción: $descrip'),
+                                              ],
+                                            ),
+                                          ),
+                                          Column(
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.edit),
+                                                onPressed: () =>
+                                                    _mostrarDialogoEjercicio(
+                                                        e),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                ),
+                                                onPressed: () =>
+                                                    _confirmarEliminacion(
+                                                        idRutina,
+                                                        idEjercicio,
+                                                        nombre),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              }
+
+              return const SizedBox();
+            },
+          ),
+        ),
       ],
     );
   }

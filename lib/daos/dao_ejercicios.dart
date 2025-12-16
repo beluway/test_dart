@@ -93,26 +93,37 @@ class DaoEjercicios {
         return null;
     }
 
-    /// Crea un nuevo ejercicio en la tabla 'ejercicios'.
-    /// Retorna el ID de la fila insertada.
-    Future<int> crearEjercicio(String nombre, String descripcion) async {
-        Database bd = await BaseDatos().obtenerBaseDatos();
-        
-        final Map<String, Object?> valores = {
-            'nombre': nombre,
-            'descripcion': descripcion ?? descripcion : 'Descripción no provista por el usuario',
-            // Agrega aquí cualquier otro campo que tu tabla 'ejercicios' requiera (ej. 'descripcion', 'tipo')
-        };
-
-        // El método `insert` de sqflite devuelve el ID de la fila insertada.
-        final int idGenerado = await bd.insert(
-            'ejercicios', 
-            valores,
-            conflictAlgorithm: ConflictAlgorithm.replace, 
-        );
-        
-        return idGenerado;
+/// Crea un nuevo ejercicio, asegurando que el campo descripcion nunca sea nulo o inválido.
+/// El valor de `descripcion` se obtiene del BLoC.
+Future<int> crearEjercicio(String nombre, {String descripcion = ''}) async { 
+    Database bd = await BaseDatos().obtenerBaseDatos();
+    
+    // 1. Priorizar la descripción recibida. Solo si está vacía/en blanco, usar el valor por defecto.
+    final String descripcionParaDB;
+    
+    // Si la descripción recibida (limpiando espacios) NO está vacía, la usamos.
+    if (descripcion.trim().isNotEmpty) {
+        descripcionParaDB = descripcion.trim();
+    } else {
+        // Si está vacía, nula o solo espacios, usamos el valor de relleno.
+        // Si deseas que quede vacío y limpio, usa '' en lugar del mensaje de relleno.
+        descripcionParaDB = 'Descripción no provista.'; 
+        // 💡 Alternativa limpia: descripcionParaDB = '';
     }
+
+    final Map<String, Object?> valores = {
+        'nombre': nombre,
+        'descripcion': descripcionParaDB, // Ahora usa el valor priorizado
+    };
+
+    final int idGenerado = await bd.insert(
+        'ejercicios', 
+        valores,
+        conflictAlgorithm: ConflictAlgorithm.replace, 
+    );
+    
+    return idGenerado;
+}
 
     
 }

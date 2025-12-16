@@ -7,17 +7,6 @@ abstract class EventoRutinas {
   const EventoRutinas();
 }
 
-
-/* class AgregarEjercicioARutina extends EventoRutinas {
- final DateTime fecha;
- final RutinaEjercicio nuevoRegistro; // Contiene idEjercicio e repeticiones
- 
- const AgregarEjercicioARutina({
- required this.fecha,
- required this.nuevoRegistro,
- });
-} */
-
 class AgregarEjercicioARutina extends EventoRutinas {
  final DateTime fecha;
  final int idEjercicio; // El ID del Ejercicio a añadir
@@ -32,28 +21,58 @@ class AgregarEjercicioARutina extends EventoRutinas {
 
 class AgregarEjercicioPorNombre extends EventoRutinas {
   final DateTime fecha;
-  final String nombreEjercicio; // El nombre de texto libre
+  final String nombreEjercicio;
   final int repeticiones;
+  // 🚨 NUEVO CAMPO NECESARIO
+  final String descripcion; 
 
   const AgregarEjercicioPorNombre({
     required this.fecha,
     required this.nombreEjercicio,
     required this.repeticiones,
+    this.descripcion = '', // Valor por defecto opcional en el constructor
   });
 
   @override
-  List<Object?> get props => [fecha, nombreEjercicio, repeticiones];
+  List<Object?> get props => [fecha, nombreEjercicio, repeticiones, descripcion];
 }
 
 // Evento disparado para modificar un ejercicio existente.
-class EditarEjercicioDeRutina extends EventoRutinas {
+class ModificarEjercicioRutina extends EventoRutinas {
+  final int idRutinaOriginal; // ID de la rutina donde está el registro
+  final int idEjercicioOriginal; // ID del EJERCICIO que se va a reemplazar/actualizar
+  
+  final String nuevoNombreEjercicio; // Puede ser el mismo o uno nuevo
+  final int nuevaRepeticiones;
+  final DateTime fechaRutina; // Para la recarga de la vista
+
+  const ModificarEjercicioRutina({
+    required this.idRutinaOriginal,
+    required this.idEjercicioOriginal,
+    required this.nuevoNombreEjercicio,
+    required this.nuevaRepeticiones,
+    required this.fechaRutina,
+  });
+
+  @override
+  List<Object?> get props => [
+    idRutinaOriginal, 
+    idEjercicioOriginal, 
+    nuevoNombreEjercicio, 
+    nuevaRepeticiones,
+    fechaRutina
+  ];
+}
+
+
+/* class EditarEjercicioDeRutina extends EventoRutinas {
   final Ejercicio ejercicioActualizado;
 
   const EditarEjercicioDeRutina(this.ejercicioActualizado);
   
   @override
   String toString() => 'EditarEjercicioDeRutina { ejercicio: ${ejercicioActualizado.nombre} }';
-}
+} */
 
 // Evento disparado para eliminar un ejercicio de la rutina.
 class EliminarEjercicioDeRutina extends EventoRutinas {
