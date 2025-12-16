@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:test_dart/dominio/dominios.dart'; // Necesitas EjercicioDetallado
 
 // --- CLASE BASE DE EVENTOS ---
 @immutable
@@ -33,7 +32,6 @@ class AgregarEjercicioPorNombre extends EventoRutinas {
     this.descripcion = '', // Valor por defecto opcional en el constructor
   });
 
-  @override
   List<Object?> get props => [fecha, nombreEjercicio, repeticiones, descripcion];
 }
 
@@ -45,6 +43,7 @@ class ModificarEjercicioRutina extends EventoRutinas {
   final String nuevoNombreEjercicio; // Puede ser el mismo o uno nuevo
   final int nuevaRepeticiones;
   final DateTime fechaRutina; // Para la recarga de la vista
+  final String nuevaDescripcion; // Nuevo campo
 
   const ModificarEjercicioRutina({
     required this.idRutinaOriginal,
@@ -52,27 +51,18 @@ class ModificarEjercicioRutina extends EventoRutinas {
     required this.nuevoNombreEjercicio,
     required this.nuevaRepeticiones,
     required this.fechaRutina,
+    required this.nuevaDescripcion,
   });
 
-  @override
   List<Object?> get props => [
     idRutinaOriginal, 
     idEjercicioOriginal, 
     nuevoNombreEjercicio, 
     nuevaRepeticiones,
-    fechaRutina
+    fechaRutina,
+    nuevaDescripcion
   ];
 }
-
-
-/* class EditarEjercicioDeRutina extends EventoRutinas {
-  final Ejercicio ejercicioActualizado;
-
-  const EditarEjercicioDeRutina(this.ejercicioActualizado);
-  
-  @override
-  String toString() => 'EditarEjercicioDeRutina { ejercicio: ${ejercicioActualizado.nombre} }';
-} */
 
 // Evento disparado para eliminar un ejercicio de la rutina.
 class EliminarEjercicioDeRutina extends EventoRutinas {
@@ -88,8 +78,19 @@ class EliminarEjercicioDeRutina extends EventoRutinas {
     required this.fechaActual,
   });
   
-  @override
-  String toString() => 'EliminarEjercicioDeRutina { idRutinaEjercicio: $idRutina, fecha: $fechaActual }';
+  List<Object?> get props => [idRutina, idEjercicio, nombreEjercicio, fechaActual];
+}
+
+class EliminarRutinaCompleta extends EventoRutinas {
+    final int idRutina;
+    final DateTime fecha;
+
+    const EliminarRutinaCompleta({
+        required this.idRutina,
+        required this.fecha,
+    });
+
+    List<Object?> get props => [idRutina, fecha];
 }
 
 class ListarRutinaEjercicio extends EventoRutinas{}

@@ -151,6 +151,7 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
   // Variables para guardar los valores del formulario
   late String _nombreEjercicio;
   late int _repeticiones;
+  late String _descripcion;
   
   // IDs necesarios para la edición
   int? _idEjercicioOriginal; // ID del ejercicio en la tabla 'ejercicios'
@@ -168,6 +169,7 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
       // Asumimos que el Map incluye estos campos de la consulta JOIN
       _nombreEjercicio = widget.ejercicio!['nombre_ejercicio'] as String;
       _repeticiones = widget.ejercicio!['repeticiones'] as int;
+      _descripcion = widget.ejercicio!['descripcion_ejercicio'] as String;
       
       // IDs que vienen de la consulta JOIN de rutina_ejercicio
       _idEjercicioOriginal = widget.ejercicio!['id_ejercicio'] as int;
@@ -177,7 +179,8 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
       // _series = widget.ejercicio!['series'] as int; 
     } else {
       _nombreEjercicio = '';
-      _repeticiones = 12; // Valor por defecto
+      _repeticiones = 12; 
+      _descripcion = 'Descripción no provista';// Valor por defecto
       // _series = 3; // Valor por defecto
     }
   }
@@ -197,6 +200,7 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
             nuevoNombreEjercicio: _nombreEjercicio, // El usuario puede haberlo cambiado
             nuevaRepeticiones: _repeticiones,
             fechaRutina: widget.fecha, 
+            nuevaDescripcion: _descripcion,
           ),
         );
       } else {
@@ -206,7 +210,7 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
             fecha: widget.fecha,
             nombreEjercicio: _nombreEjercicio,
             repeticiones: _repeticiones, 
-            descripcion: '', 
+            descripcion: _descripcion, 
           ),
         );
       }
@@ -229,7 +233,6 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
               // 1. Nombre del Ejercicio (No editable si se edita para evitar complicar el flujo)
               TextFormField(
                 initialValue: _nombreEjercicio,
-                readOnly: widget.ejercicio != null, // Bloquear nombre si se edita
                 decoration: InputDecoration(
                   labelText: 'Nombre del Ejercicio',
                   // Mostrar el ID en la edición
@@ -239,7 +242,13 @@ class DialogoGestionEjercicioState extends State<DialogoGestionEjercicio> {
                 onSaved: (value) => _nombreEjercicio = value!,
               ),
               // NOTA: ELIMINÉ EL CAMPO SERIES PARA COINCIDIR CON TU ESQUEMA SQL
-              
+              TextFormField(
+                initialValue: _descripcion,
+                decoration: const InputDecoration(labelText: 'Descripción'),
+                keyboardType: TextInputType.text,
+                maxLines: 3,
+                onSaved: (value) => _descripcion = value ?? '', // ⬅️ CRÍTICO: Capturar el nuevo valor
+                ),
               // 3. Repeticiones
               TextFormField(
                 initialValue: _repeticiones.toString(),

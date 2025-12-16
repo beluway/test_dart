@@ -7,7 +7,7 @@ import 'package:test_dart/daos/daos.dart';
 class CargarRutinaPorFecha extends EventoRutinas {
   final DateTime fecha;
   const CargarRutinaPorFecha({required this.fecha});
-  @override
+
   List<Object?> get props => [fecha];
 }
 
@@ -15,6 +15,7 @@ class BlocRutinas extends Bloc<EventoRutinas, EstadoRutinas> {
   // Uso de final para las dependencias para garantizar inmutabilidad
   final DaoRutinaEjercicio _daoRutinaEjercicio = DaoRutinaEjercicio();
   final DaoEjercicios _daoEjercicio = DaoEjercicios();
+  final DaoRutinas _daoRutinas = DaoRutinas();
 
   BlocRutinas() : super(const CargandoRutinas()) {
     // Registro de manejadores de eventos
@@ -22,6 +23,8 @@ class BlocRutinas extends Bloc<EventoRutinas, EstadoRutinas> {
     on<AgregarEjercicioARutina>(_onAgregarEjercicioARutina);
     on<AgregarEjercicioPorNombre>(_onAgregarEjercicioPorNombre);
     on<ModificarEjercicioRutina>(_onModificarEjercicioRutina);
+    on<EliminarEjercicioDeRutina>(_onEliminarEjercicioDeRutina);
+    on<EliminarRutinaCompleta>(_onEliminarRutinaCompleta);
   }
 
   // =========================================================================
@@ -141,55 +144,122 @@ class BlocRutinas extends Bloc<EventoRutinas, EstadoRutinas> {
     emit(const CargandoRutinas()); 
     
     try {
-        // --- 1. Obtener o Crear el ID del nuevo Ejercicio ---
-        int? nuevoIdEjercicio = 
-            await _daoEjercicio.obtenerIdPorNombre(evento.nuevoNombreEjercicio);
-
-        // Si no existe, lo creamos.
-        nuevoIdEjercicio ??= await _daoEjercicio.crearEjercicio(
-            evento.nuevoNombreEjercicio, 
-            descripcion: '', // Asume que la descripción se maneja en el DAO o es vacía
-        );
+        final int idOriginal = evento.idEjercicioOriginal;
+        final int idRutina = evento.idRutinaOriginal;
         
-        if (nuevoIdEjercicio == null || nuevoIdEjercicio <= 0) {
-            throw Exception('No se pudo obtener el ID del nuevo ejercicio.');
+        // 1. Validar que tenemos IDs válidos para trabajar
+        if (idOriginal <= 0 || idRutina <= 0) {
+            throw Exception('IDs de rutina o ejercicio inválidos para la modificación.');
         }
 
-        // --- 2. Determinar la operación en la tabla rutina_ejercicio ---
-        if (nuevoIdEjercicio == evento.idEjercicioOriginal) {
-            // A) Si el Ejercicio NO CAMBIÓ (Solo Repeticiones)
-            // Actualizamos la repetición del registro existente.
-            await _daoRutinaEjercicio.actualizarRepeticionesRutinaEjercicio(
-                idRutina: evento.idRutinaOriginal,
-                idEjercicio: nuevoIdEjercicio,
-                nuevasRepeticiones: evento.nuevaRepeticiones,
-            );
-        } else {
-            // B) Si el Ejercicio SÍ CAMBIÓ (Repeticiones y Ejercicio)
-            // 1. Eliminamos el registro antiguo (id_rutina, id_ejercicio_original)
-            await _daoRutinaEjercicio.eliminarEjercicioDeRutina(
-                idRutina: evento.idRutinaOriginal,
-                idEjercicio: evento.idEjercicioOriginal,
-            );
+        // --- A. Actualizar el Ejercicio (nombre y descripción) ---
+        // Esto cambia la definición del ejercicio para TODAS las rutinas que lo usan.
+        final int filasEjActualizadas = await _daoEjercicio.actualizarEjercicio(
+            idEjercicio: idOriginal,
+            nuevoNombre: evento.nuevoNombreEjercicio,
+            nuevaDescripcion: evento.nuevaDescripcion,
+        );
+        
+        if (filasEjActualizadas == 0) {
+             // Esto puede ocurrir si el ejercicio fue eliminado antes por otro proceso,
+             // aunque la rutina_ejercicio siga existiendo. Lanzamos error.
+             throw Exception("No se pudo actualizar la definición del ejercicio (ID: $idOriginal).");
+        }
 
-            // 2. Insertamos el nuevo registro (id_rutina, nuevo_id_ejercicio)
-            await _daoRutinaEjercicio.anadirEjercicioARutinaConFecha(
-                fecha: evento.fechaRutina,
-                idEjercicio: nuevoIdEjercicio,
-                repeticiones: evento.nuevaRepeticiones,
-            );
+        // --- B. Actualizar la Rutina_Ejercicio (repeticiones) ---
+        // Esto solo afecta la rutina del día actual.
+        final int filasREActualizadas = await _daoRutinaEjercicio.actualizarRepeticionesRutinaEjercicio(
+            idRutina: idRutina,
+            idEjercicio: idOriginal, // Usamos el ID original, ya que no cambió la FK
+            nuevasRepeticiones: evento.nuevaRepeticiones,
+        );
+
+        if (filasREActualizadas == 0) {
+             throw Exception("No se pudo actualizar la cantidad de repeticiones en la rutina.");
         }
 
         emit(const OperacionExitosa('Ejercicio modificado con éxito.'));
         
-        // Recargar la rutina para mostrar los cambios
-        add(CargarRutinaPorFecha(fecha: evento.fechaRutina));
+        // Recargar la lista para que se vean los cambios
+        add(CargarRutinaPorFecha(fecha: evento.fechaRutina)); 
 
     } catch (e) {
         final String errorMsg = 'Error al modificar ejercicio: ${e.toString()}';
         emit(ErrorRutinas([], errorMsg));
-        // Recargar para quitar el loading
         add(CargarRutinaPorFecha(fecha: evento.fechaRutina)); 
     }
 }
+
+//--------------ELIMINAR EJERCICIO DE RUTINA Y TMB RUTINA SI QUEDÓ VACÍA
+Future<void> _onEliminarEjercicioDeRutina(
+    EliminarEjercicioDeRutina evento, 
+    Emitter<EstadoRutinas> emit,
+) async {
+    emit(const CargandoRutinas());
+    
+    try {
+        // 1. Eliminar el registro de la tabla de unión (rutina_ejercicio)
+        final int eliminados = await _daoRutinaEjercicio.eliminarEjercicioDeRutina(
+            idRutina: evento.idRutina, 
+            idEjercicio: evento.idEjercicio,
+        );
+
+        if (eliminados > 0) {
+            // 2. Verificación y Limpieza: ¿La rutina quedó vacía?
+            final int conteo = await _daoRutinas.contarEjerciciosEnRutina(evento.idRutina);
+            
+            if (conteo == 0) {
+                // Si no quedan ejercicios, eliminamos la Rutina de la tabla 'rutinas'
+                await _daoRutinas.eliminarRutina(evento.idRutina);
+                
+                // Opcional pero recomendado: Verificar si la indicación también queda vacía
+                // Este paso puede ser complejo si la 'Indicacion' también contiene comidas.
+                // Por simplicidad, por ahora solo eliminamos la Rutina vacía.
+            }
+
+            emit(OperacionExitosa('Ejercicio "${evento.nombreEjercicio}" eliminado.'));
+        } else {
+            emit(ErrorRutinas([], 'Advertencia: El ejercicio no fue encontrado para eliminar.'));
+        }
+
+        // 3. Recargar la rutina para actualizar la UI
+        add(CargarRutinaPorFecha(fecha: evento.fechaActual));
+
+    } catch (e) {
+        final String errorMsg = 'Error al eliminar ejercicio: ${e.toString()}';
+        print('BLoC CRITICAL ERROR: $errorMsg');
+        emit(ErrorRutinas([], errorMsg));
+        add(CargarRutinaPorFecha(fecha: evento.fechaActual));
+    }
+}
+
+Future<void> _onEliminarRutinaCompleta(
+    EliminarRutinaCompleta evento, 
+    Emitter<EstadoRutinas> emit,
+) async {
+    emit(const CargandoRutinas());
+    
+    try {
+        final int idRutina = evento.idRutina;
+        
+        // 1. Eliminar todos los registros de unión (rutina_ejercicio)
+        // Necesitas un método en DaoRutinaEjercicio para esto.
+        await _daoRutinaEjercicio.eliminarTodosEjerciciosDeRutina(idRutina);
+        
+        // 2. Eliminar la rutina principal (tabla 'rutinas')
+        await _daoRutinas.eliminarRutina(idRutina);
+
+        emit(const OperacionExitosa('Rutina completa eliminada con éxito.'));
+
+        // 3. Recargar el día (mostrará el mensaje de que no hay rutina)
+        add(CargarRutinaPorFecha(fecha: evento.fecha));
+
+    } catch (e) {
+        final String errorMsg = 'Error al eliminar la rutina: ${e.toString()}';
+        print('BLoC CRITICAL ERROR: $errorMsg');
+        emit(ErrorRutinas([], errorMsg));
+        add(CargarRutinaPorFecha(fecha: evento.fecha));
+    }
+}
+
 }

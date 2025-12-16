@@ -48,16 +48,28 @@ class DaoEjercicios {
   // ============================
   // ACTUALIZAR EJERCICIO
   // ============================
-  Future<int> actualizarEjercicio(Ejercicio ejercicio) async {
+Future<int> actualizarEjercicio({
+    required int idEjercicio,
+    required String nuevoNombre,
+    required String nuevaDescripcion,
+}) async {
     Database bd = await BaseDatos().obtenerBaseDatos();
+    
+    final Map<String, Object?> valores = {
+        'nombre': nuevoNombre,
+        'descripcion': nuevaDescripcion,
+    };
 
-    return await bd.update(
-      'ejercicios',
-      ejercicio.toMap(),
-      where: 'id = ?',
-      whereArgs: [ejercicio.id],
+    // Actualiza el registro en la tabla 'ejercicios' por su ID
+    final int filasActualizadas = await bd.update(
+        'ejercicios',
+        valores,
+        where: 'id = ?',
+        whereArgs: [idEjercicio],
     );
-  }
+    
+    return filasActualizadas;
+}
 
   // ============================
   // ELIMINAR EJERCICIO
@@ -124,6 +136,28 @@ Future<int> crearEjercicio(String nombre, {String descripcion = ''}) async {
     
     return idGenerado;
 }
+
+Future<int> actualizarDescripcionEjercicio({
+    required int idEjercicio,
+    required String nuevaDescripcion,
+}) async {
+    Database bd = await BaseDatos().obtenerBaseDatos();
+    
+    final Map<String, Object?> valores = {
+        'descripcion': nuevaDescripcion,
+    };
+
+    final int filasActualizadas = await bd.update(
+        'ejercicios',
+        valores,
+        where: 'id = ?',
+        whereArgs: [idEjercicio],
+    );
+    
+    return filasActualizadas;
+}
+
+
 
     
 }

@@ -299,7 +299,19 @@ class DaoRutinaEjercicio {
       where: 'id_rutina = ? AND id_ejercicio = ?',
       whereArgs: [idRutina, idEjercicio],
     );
+
   }
+
+  Future<void> eliminarTodosEjerciciosDeRutina(int idRutina) async {
+    Database bd = await BaseDatos().obtenerBaseDatos();
+    
+    // Elimina todos los ejercicios (filas) asociados a esta rutina
+    await bd.delete(
+        'rutina_ejercicio',
+        where: 'id_rutina = ?',
+        whereArgs: [idRutina],
+    );
+}
 
   // =========================
   // ACTUALIZAR REPETICIONES

@@ -131,7 +131,7 @@ class _MantenimientoEjerciciosState extends State<MantenimientoEjercicios> {
                         );
 
                         if (esEdicion) {
-                          await DaoEjercicios().actualizarEjercicio(nuevo);
+                          await DaoEjercicios().actualizarEjercicio(idEjercicio: nuevo.id!.toInt(),nuevoNombre: nuevo.nombre,nuevaDescripcion: nuevo.descripcion.toString() );
                         } else {
                           await DaoEjercicios().insertarEjercicio(nuevo);
                         }

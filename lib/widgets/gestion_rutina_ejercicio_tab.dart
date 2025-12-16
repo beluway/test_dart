@@ -1,10 +1,9 @@
-/* 
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test_dart/blocs/bloc_rutinas.dart';
 import 'package:test_dart/blocs/estados_rutinas.dart';
 import 'package:test_dart/blocs/evento_rutinas.dart';
-import 'package:test_dart/dominio/ejercicio.dart';
 import 'package:test_dart/widgets/calendar.dart';
 // import 'package:test_dart/widgets/dialogo_gestion_ejercicio.dart'; // Comentado si ya no se usa
 
@@ -41,159 +40,23 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
     _cargarRutina(nuevaFecha);
   }
 
-  /// 🎯 2. IMPLEMENTACIÓN: Envía el evento al BLoC para AGREGAR.
-  void _anadirEjercicio(Ejercicio ejercicio, int repeticiones) {
-    // 1. Disparar el evento de AGREGAR, que maneja la creación de Rutina/Indicacion
-    BlocProvider.of<BlocRutinas>(context).add(
-        AgregarEjercicioARutina(
-            fecha: _fechaActual, // La fecha que el usuario está viendo
-            idEjercicio: ejercicio.id ?? 0,
-            repeticiones: repeticiones,
-        )
-    );
-    
-    // 2. Feedback (Opcional)
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Añadiendo ${ejercicio.nombre} a la rutina...')),
-    );
-  }
-  
-  /// 🎯 3. IMPLEMENTACIÓN: Lógica de EDICIÓN (Placeholder)
-  void _editarEjercicio(Ejercicio ejercicio, int repeticiones, Map<String, dynamic> datosOriginales) {
-    // ⚠️ Lógica PENDIENTE. Esto requerirá un nuevo evento en el BLoC (e.g., EditarEjercicioDeRutina)
-    final int idRutina = (datosOriginales['id_rutina'] as int?)?? 0;
-
-    // Aquí iría el evento de Edición
-    /* BlocProvider.of<BlocRutinas>(context).add(
-        EditarEjercicioDeRutina(
-            idRutina: idRutina, 
-            idEjercicio: ejercicio.id, // El ID que se está editando
-            nuevasRepeticiones: repeticiones,
-            fechaActual: _fechaActual
-        )
-    );
-    */
-    
-    // Feedback temporal
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Pendiente: Editar Rutina ID $idRutina, Repeticiones $repeticiones')),
-    );
-  }
-
-/*   /// Muestra el diálogo para Añadir/Editar.
-  Future<void> _mostrarDialogoEjercicio(Map<String, dynamic>? ejercicioExistente) async {
-    // ... (el cuerpo de esta función se mantiene como lo enviaste)
-    Ejercicio? _ejercicioSeleccionado;
-    TextEditingController _repeticionesController = TextEditingController();
-    
-    // Si estamos editando un ejercicio existente, pre-cargamos los valores
-    if (ejercicioExistente != null) {
-        final int idEjercicio = (ejercicioExistente['id_ejercicio'] as int?) ?? 0;
-        final String nombreEjercicio = (ejercicioExistente['nombre_ejercicio'] as String?) ?? '';
-        final int repeticiones = (ejercicioExistente['repeticiones'] as int?) ?? 0;
-
-        // Intentamos encontrar el objeto Ejercicio real (asumiendo que está disponible)
-        _ejercicioSeleccionado = _ejerciciosDisponibles.firstWhere(
-            (e) => e.id == idEjercicio, 
-            orElse: () => Ejercicio(id: idEjercicio, nombre: nombreEjercicio) 
-        );
-
-        _repeticionesController.text = repeticiones.toString();
-    }
-
-    await showDialog(
-        context: context,
-        builder: (context) {
-            return AlertDialog(
-                title: Text(ejercicioExistente == null ? 'Añadir Nuevo Ejercicio' : 'Editar Ejercicio'),
-                content: SingleChildScrollView(
-                    child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                            // 1. Selector de Ejercicio (DropdownButton)
-                            StatefulBuilder(
-                                builder: (BuildContext context, StateSetter setStateInterno) {
-                                    return DropdownButtonFormField<Ejercicio>(
-                                        decoration: const InputDecoration(labelText: 'Ejercicio'),
-                                        value: _ejercicioSeleccionado,
-                                        items: _ejerciciosDisponibles.map((e) {
-                                            return DropdownMenuItem<Ejercicio>(
-                                                value: e,
-                                                child: Text(e.nombre),
-                                            );
-                                        }).toList(),
-                                        onChanged: (Ejercicio? nuevoEjercicio) {
-                                            setStateInterno(() {
-                                                _ejercicioSeleccionado = nuevoEjercicio;
-                                            });
-                                        },
-                                    );
-                                },
-                            ),
-                            const SizedBox(height: 20),
-                            
-                            // 2. Input de Repeticiones
-                            TextFormField(
-                                controller: _repeticionesController,
-                                decoration: const InputDecoration(
-                                    labelText: 'Repeticiones',
-                                    border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                            ),
-                        ],
-                    ),
-                ),
-                actions: [
-                    TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancelar'),
-                    ),
-                    ElevatedButton(
-                        onPressed: () {
-                            // 3. Validar y Procesar la acción
-                            final int? repeticiones = int.tryParse(_repeticionesController.text);
-
-                            if (_ejercicioSeleccionado == null || repeticiones == null || repeticiones <= 0) {
-                                // Muestra un mensaje de error si la validación falla
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Seleccione un ejercicio y repeticiones válidas.')),
-                                );
-                                return;
-                            }
-
-                            Navigator.of(context).pop(); // Cerrar el diálogo
-
-                            // Lógica para AÑADIR o EDITAR
-                            if (ejercicioExistente == null) {
-                                // ➡️ AÑADIR (Llamada al método implementado)
-                                _anadirEjercicio(_ejercicioSeleccionado!, repeticiones);
-                            } else {
-                                // ➡️ EDITAR (Llamada al método implementado)
-                                _editarEjercicio(_ejercicioSeleccionado!, repeticiones, ejercicioExistente);
-                            }
-                        },
-                        child: Text(ejercicioExistente == null ? 'Añadir' : 'Guardar'),
-                    ),
-                ],
-            );
-        },
-    );
-  } */
+  //----------------MUESTRA EL DIALOGO PARA AÑADIR/MODIFICAR EJERCICIO
 
  Future<void> _mostrarDialogoEjercicio(Map<String, dynamic>? ejercicioExistente) async {
     // ⚠️ Importante: Usaremos 'nombre' y no 'id' para la lógica del DAO.
-    TextEditingController _nombreEjercicioController = TextEditingController();
-    TextEditingController _repeticionesController = TextEditingController();
-    TextEditingController _descripcionController = TextEditingController();
+    TextEditingController nombreEjercicioController = TextEditingController();
+    TextEditingController repeticionesController = TextEditingController();
+    TextEditingController descripcionController = TextEditingController();
     
     // Si estamos editando, pre-cargamos los valores
     if (ejercicioExistente != null) {
         final String nombreEjercicio = (ejercicioExistente['nombre_ejercicio'] as String?) ?? '';
         final int repeticiones = (ejercicioExistente['repeticiones'] as int?) ?? 0;
+        final String descripcionEjercicio = (ejercicioExistente['descripcion_ejercicio'] as String?) ?? '';
 
-        _nombreEjercicioController.text = nombreEjercicio;
-        _repeticionesController.text = repeticiones.toString();
+        nombreEjercicioController.text = nombreEjercicio;
+        repeticionesController.text = repeticiones.toString();
+        descripcionController.text = descripcionEjercicio;
     }
 
     await showDialog(
@@ -207,28 +70,27 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
                         children: [
                             // 1. Input de Texto para el Nombre del Ejercicio (Nuevo)
                             TextFormField(
-                                controller: _nombreEjercicioController,
+                                controller: nombreEjercicioController,
                                 decoration: const InputDecoration(
                                     labelText: 'Nombre del Ejercicio',
                                     border: OutlineInputBorder(),
                                 ),
-                                // Si estamos editando, no permitimos cambiar el nombre
-                                readOnly: ejercicioExistente != null, 
                             ),
                             const SizedBox(height: 20),
                             
                             // 2. Input de Repeticiones
                             TextFormField(
-                                controller: _repeticionesController,
+                                controller: repeticionesController,
                                 decoration: const InputDecoration(
                                     labelText: 'Repeticiones',
                                     border: OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.number,
                             ),
+                            const SizedBox(height: 20),
                               // 2. Input de descripción
                             TextFormField(
-                                controller: _descripcionController,
+                                controller: descripcionController,
                                 decoration: const InputDecoration(
                                     labelText: 'Descripción',
                                     border: OutlineInputBorder(),
@@ -245,9 +107,9 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
                     ),
                     ElevatedButton(
                         onPressed: () {
-                            final String nombreEjercicio = _nombreEjercicioController.text.trim();
-                            final int? repeticiones = int.tryParse(_repeticionesController.text);
-                            final String descripcion = _descripcionController.text.trim();
+                            final String nombreEjercicio = nombreEjercicioController.text.trim();
+                            final int? repeticiones = int.tryParse(repeticionesController.text);
+                            final String descripcion = descripcionController.text.trim();
 
                             if (nombreEjercicio.isEmpty || repeticiones == null || repeticiones <= 0) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -264,7 +126,7 @@ class GestionRutinaEjercicioTabState extends State<GestionRutinaEjercicioTab> {
                                 _anadirEjercicioPorNombre(nombreEjercicio, repeticiones, descripcion);
                             } else {
                                 // ➡️ EDITAR: Mantenemos la lógica de edición
-                                _editarEjercicioPorNombre(nombreEjercicio, repeticiones, ejercicioExistente);
+                                _editarEjercicioPorNombre(nombreEjercicio, repeticiones,descripcion ,ejercicioExistente);
                             }
                         },
                         child: Text(ejercicioExistente == null ? 'Añadir' : 'Guardar'),
@@ -292,10 +154,39 @@ void _anadirEjercicioPorNombre(String nombre, int repeticiones, String descripci
     );
 }
 
-// 📌 Placeholder para editar
-void _editarEjercicioPorNombre(String nombre, int repeticiones, Map<String, dynamic> datosOriginales) {
+//------------------------EDITAR EJERCICIO----------------------------------
+void _editarEjercicioPorNombre(
+    String nuevoNombre, 
+    int nuevasRepeticiones,
+    String nuevaDescripcion,
+    Map<String, dynamic> datosOriginales // Contiene id_rutina e id_ejercicio originales
+) {
+    // ⚠️ Se necesitan los IDs originales para la clave compuesta de la DB
+    final int idRutinaOriginal = (datosOriginales['id_rutina'] as int?) ?? 0;
+    final int idEjercicioOriginal = (datosOriginales['id_ejercicio'] as int?) ?? 0;
+
+    if (idRutinaOriginal == 0 || idEjercicioOriginal == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: No se encontraron los IDs originales para la edición.')),
+        );
+        return;
+    }
+
+    // 1. Disparar el evento de MODIFICACIÓN
+    BlocProvider.of<BlocRutinas>(context).add(
+        ModificarEjercicioRutina(
+            idRutinaOriginal: idRutinaOriginal, // ID de la rutina donde está el ejercicio
+            idEjercicioOriginal: idEjercicioOriginal, // ID del ejercicio que se va a modificar/reemplazar
+            nuevoNombreEjercicio: nuevoNombre, // El nuevo nombre (puede ser el mismo)
+            nuevaRepeticiones: nuevasRepeticiones, // Las nuevas repeticiones
+            nuevaDescripcion: nuevaDescripcion, // La nueva descripción
+            fechaRutina: _fechaActual, // Para recargar la lista
+        )
+    );
+    
+    // 2. Feedback
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pendiente: Lógica de edición para $nombre.')),
+        SnackBar(content: Text('Guardando cambios para $nuevoNombre...')),
     );
 }
 
@@ -327,18 +218,32 @@ void _editarEjercicioPorNombre(String nombre, int repeticiones, Map<String, dyna
         SelectorFecha(onDateSelected: _actualizarFecha),
         const Divider(),
 
-  Expanded(
- child: BlocBuilder<BlocRutinas, EstadoRutinas>(
- builder: (context, state) {
-if (state is CargandoRutinas) {
-return const Center(child: CircularProgressIndicator());
- }
- if (state is ErrorRutinas) {
-return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
- }
- 
-    if (state is ExitoRutinas) {
- final List<Map<String, dynamic>> ejercicios = state.ejercicios; 
+              Expanded(
+            child: BlocListener<BlocRutinas,EstadoRutinas>(
+              listener: (context, state) {
+                if (state is OperacionExitosa) {
+                // Muestra éxito
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.mensaje ?? 'Operación exitosa')),
+                );
+              } else if (state is ErrorRutinas) {
+                // Muestra error
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('FALLÓ: ${state.mensaje}')),
+                );
+              }
+              },
+              child: BlocBuilder<BlocRutinas, EstadoRutinas>(
+            builder: (context, state) {
+            if (state is CargandoRutinas) {
+            return const Center(child: CircularProgressIndicator());
+            }
+            if (state is ErrorRutinas) {
+            return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
+            }
+            
+                if (state is ExitoRutinas) {
+            final List<Map<String, dynamic>> ejercicios = state.ejercicios; 
                 
                 // 1. Lógica para determinar el texto del botón
                 final String buttonLabel = ejercicios.isEmpty
@@ -348,11 +253,34 @@ return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
                 // 2. El botón dinámico (fuera del ListView para que siempre se vea)
                 final Widget actionButton = Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton.icon(
+                    child: Row(// Usamos un Row para agrupar el botón Añadir y Eliminar
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
                         onPressed: () => _mostrarDialogoEjercicio(null), 
                         icon: const Icon(Icons.add),
                         label: Text(buttonLabel),
                     ),
+                    // Botón ELIMINAR RUTINA COMPLETA (Solo si hay ejercicios)
+            if (ejercicios.isNotEmpty)
+                ElevatedButton.icon(
+                    onPressed: () {
+                        // Obtenemos el ID de la rutina del primer ejercicio
+                        final int idRutinaAEliminar = (ejercicios.first['id_rutina'] as int?) ?? 0;
+                        if (idRutinaAEliminar > 0) {
+                            _mostrarDialogoConfirmacion(idRutinaAEliminar);
+                        }
+                    }, 
+                    icon: const Icon(Icons.delete_sweep),
+                    label: const Text('Eliminar Rutina'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red, // Resaltar la acción destructiva
+                    ),
+                ),
+                      ],
+                    ),
+                    
+                    
                 );
                 
                 // 3. Retornar el Column principal con el botón y el contenido
@@ -375,6 +303,7 @@ return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
                                         final int idEjercicio = (ejercicio['id_ejercicio'] as int?)?? 0;
                                         final String nombre = (ejercicio['nombre_ejercicio'] as String?) ?? 'Sin nombre'; 
                                         final int repeticiones = (ejercicio['repeticiones'] as int?)?? 0;
+                                        final String descripcion = (ejercicio['descripcion_ejercicio'] as String?)?? 'Sin descripción.';
 
                                         return Padding(
                                             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -382,7 +311,8 @@ return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
                                                 child: ListTile(
                                                     leading: const Icon(Icons.fitness_center),
                                                     title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                                    subtitle: Text('Repeticiones: $repeticiones'), 
+                                                    subtitle: Text('Repeticiones: $repeticiones Descripción: $descripcion'), 
+                                                    
                                                     trailing: Row(
                                                         mainAxisSize: MainAxisSize.min,
                                                         children: [
@@ -409,15 +339,49 @@ return Center(child: Text('Error: ${state.mensaje ?? 'Error de carga'}'));
  return const Center(child: Text('Cargando la gestión de la rutina...'));
  },
  ),
+              ),
+            
+            
  ),
 
       ],
     );
   }
-}
- */
 
-import 'package:flutter/material.dart';
+  Future<void> _mostrarDialogoConfirmacion(int idRutina) async {
+    await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+            title: const Text('Confirmar Eliminación'),
+            content: const Text('¿Está seguro de que desea eliminar TODA la rutina de ejercicios para este día? Esta acción es irreversible.'),
+            actions: [
+                TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                        Navigator.of(context).pop();
+                        // 🎯 Disparar la eliminación
+                        BlocProvider.of<BlocRutinas>(context).add(
+                            EliminarRutinaCompleta(
+                                idRutina: idRutina,
+                                fecha: _fechaActual,
+                            ),
+                        );
+                        // El BlocListener se encargará del feedback.
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+                ),
+            ],
+        ),
+    );
+}
+}
+
+
+/* import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:test_dart/blocs/bloc_rutinas.dart';
 import 'package:test_dart/blocs/estados_rutinas.dart';
@@ -756,3 +720,4 @@ class _GestionRutinaEjercicioTabState
     );
   }
 }
+ */

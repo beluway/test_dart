@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:test_dart/daos/base_datos.dart';
 import 'package:test_dart/dominio/dominios.dart';
 import 'package:sqflite/sqlite_api.dart';
@@ -103,5 +104,25 @@ Future<int> crearRutina({required int idIndicacion}) async {
     return idRutinaGenerado;
 }
 
+// 1. Contar ejercicios en una rutina específica
+Future<int> contarEjerciciosEnRutina(int idRutina) async {
+    Database bd = await BaseDatos().obtenerBaseDatos();
+    final List<Map<String, dynamic>> resultado = await bd.rawQuery(
+        'SELECT COUNT(*) FROM rutina_ejercicio WHERE id_rutina = ?', 
+        [idRutina],
+    );
+    // El resultado es típicamente [{ "COUNT(*)": 5 }]
+    return Sqflite.firstIntValue(resultado) ?? 0;
+}
+
+// 2. Eliminar una rutina (que ya no tiene ejercicios)
+Future<void> eliminarRutina(int idRutina) async {
+    Database bd = await BaseDatos().obtenerBaseDatos();
+    await bd.delete(
+        'rutinas',
+        where: 'id = ?',
+        whereArgs: [idRutina],
+    );
+}
 
 }
